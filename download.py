@@ -4,8 +4,11 @@ import requests
 import pyrfc6266
 import os
 import sys
+import re
 from pathlib import Path
 import time
+
+FN_PATTERN = re.compile(r'filename="(?P<filename>[a-zA-Z0-9_.]+)"')
 
 def adaptive(t, is_done):
     if is_done:
@@ -25,7 +28,11 @@ def find_path(dst_dir, code, count):
     return None
 
 def save_file(dst_dir, resp):
-    fname = pyrfc6266.requests_response_to_filename(resp)
+    cd = resp.headers['content-disposition']
+    m = FN_PATTERN.search(cd)
+    if not m:
+        raise Exception("find file name failed: %s" %cd)
+    fname = m.group('filename')
     dst = dst_dir / fname
     with dst.open("wb") as of:
         for chunk in resp.iter_content(chunk_size=8192):
